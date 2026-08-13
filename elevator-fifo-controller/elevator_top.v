@@ -85,6 +85,9 @@ assign fifo_wr_en = request_valid && !fifo_full;
 // 1. Elevator is IDLE
 // 2. FIFO is NOT empty
 // 3. No request is currently being processed.
+
+    //Here we used combinational logic to read data from fifo bcz it should read data at that condition only if we used sequential logic 
+    //then the o/p will be high untill i/p changes(Flip Flop behaviour).
 always @(*) begin
 
     fifo_rd_en = 1'b0;
@@ -113,6 +116,8 @@ end
 // NOTE:
 // fifo_data_valid occurs after the FIFO read.
 //
+
+    //Here we used sequential logic because request_pending should be high untill it reaches idle state
 always @(posedge clk or posedge rst) begin
 
     if (rst) 
@@ -160,6 +165,9 @@ end
 // Therefore target_floor is updated only when valid data
 // comes from FIFO.
 //
+
+    //Here we used sequential logic because target_floor should not change untill lift reaches target floor but target floor will be changed 
+    //when new i/p is given so to overcome this we are using request_valid.
 always @(posedge clk or posedge rst) begin
 
     if (rst)
