@@ -2,175 +2,236 @@
 
 ## 📌 Project Overview
 
-This project implements a **Smart Elevator Controller integrated with a FIFO-based request scheduler** using Verilog.
-It enhances a traditional FSM-based elevator by introducing **request queuing**, enabling efficient handling of multiple floor requests.
+This project implements an **industry-style Smart Elevator Controller** using **Verilog HDL**, combining a **Finite State Machine (FSM)** with a **FIFO-based request scheduler** to model real-world elevator systems.
 
-The design simulates real-world elevator behavior including:
+Unlike basic designs, this system introduces **queued request handling**, ensuring that multiple floor requests are processed **sequentially, reliably, and without loss**, similar to commercial elevator controllers.
 
-* 🏢 Multi-floor navigation (0–15 floors)
-* 📥 FIFO-based request handling
-* ⚡ Power failure handling (Electricity / Generator)
-* ⚖️ Overweight detection with alarm
-* 🚨 Emergency stop handling
-* 🚪 Automatic door control with timer
-* 💡 Fan & light control inside elevator
-
-The system ensures **ordered, safe, and efficient servicing of multiple requests**.
+The design emphasizes **robustness, safety, and determinism**, making it a strong demonstration of **RTL design, digital system architecture, and verification skills**.
 
 ---
 
-## ⚙️ Key Features
+## 🚀 Key Highlights (Why this is Top-Level)
 
-* ✅ FIFO-based request scheduling (handles multiple requests)
-* 🔄 Sequential request processing (no request loss)
-* 🚪 Door open/close control with timing
-* ⚖️ Overweight detection (Alarm if weight ≥ 500)
-* 🚨 Emergency stop functionality
-* ⚡ Power failure handling with generator backup
-* 💡 Fan and light control
-* 🔄 Handles incorrect user inputs (Up/Down mismatch)
-* 🧪 Fully verified with extensive testbench (22 test cases)
+* 📥 **FIFO-based request scheduling** (real-world feature)
+* 🧠 **FSM-based control logic with 9 states**
+* 🔄 **Deterministic request servicing (no duplication / no skipping)**
+* ⚠️ **Safety-first design**
+
+  * Emergency stop
+  * Overweight protection
+  * Power failure handling
+* 🧪 **22 comprehensive test cases**
+* 🖥️ **Waveform + simulation log validation**
+* 🧩 **Modular RTL architecture**
 
 ---
 
 ## 🧠 System Architecture
 
+```text
+User Requests → FIFO Queue → Target Floor Logic → Elevator FSM → Outputs
 ```
-User Requests → FIFO → Elevator FSM → Outputs
-```
 
-### Modules Used:
+### 📦 Modules
 
-1. **FIFO (`fifo_sync`)**
-
-   * Stores incoming floor requests
-   * Prevents request loss
-   * Provides `data_valid` for safe read
-
-2. **Elevator FSM (`elevator`)**
-
-   * Controls movement, doors, safety
-   * Implements real-world elevator logic
-
-3. **Top Module (`elevator_top`)**
-
-   * Integrates FIFO + FSM
-   * Manages request scheduling
+| Module            | Description                             |
+| ----------------- | --------------------------------------- |
+| `fifo_sync`       | Stores and sequences floor requests     |
+| `elevator`        | FSM controlling movement, safety, doors |
+| `elevator_top`    | Integrates FIFO + FSM                   |
+| `elevator_top_tb` | Testbench with 22 scenarios             |
 
 ---
 
-## 📥 FIFO Design Details
+## 📥 FIFO-Based Scheduling (Core Innovation)
 
-* Type: Synchronous FIFO
-* Depth: 8
-* Data Width: 4-bit (floor number)
+### Problem Solved:
+
+Traditional elevator FSM:
+❌ Cannot handle multiple requests efficiently
+❌ May lose or overwrite requests
+
+### Solution:
+
+✔ FIFO queue stores incoming requests
+✔ Requests processed in **order of arrival (FIFO)**
 
 ### Features:
 
-* ✔ Write when `request_valid = 1`
-* ✔ Read only when elevator is idle
-* ✔ Uses `data_valid` to avoid repeated reads
-* ✔ Full & Empty flag support
+* Depth: 8
+* Data width: 4-bit (floor)
+* Full / Empty detection
+* `data_valid` ensures **single-cycle safe read**
 
 ---
 
-## 🔁 Request Scheduling Logic
+## 🔁 Request Control Logic
 
-* New requests are stored in FIFO
-* Elevator reads request only when:
+### Smart Scheduling Mechanism:
 
-  * It is in **IDLE state**
-  * FIFO is **not empty**
-  * No request is currently being processed
+A **request_pending flag** ensures:
 
-### Request Pending Mechanism:
-
-* Prevents multiple reads of the same request
-* Ensures **one request is completed before next starts**
+* Only **one request is active at a time**
+* Prevents **multiple reads of same FIFO data**
+* Guarantees **complete execution before next request**
 
 ---
 
-## 🧠 FSM States
+## 🧠 FSM Design
 
-| State               | Description                   |
-| ------------------- | ----------------------------- |
-| `electricity_check` | Waiting for power restoration |
-| `idle`              | Elevator waiting              |
-| `move_up`           | Moving upward                 |
-| `move_down`         | Moving downward               |
-| `door_open`         | Door open                     |
-| `weight_check`      | Checking overload             |
-| `alarm`             | Overweight condition          |
-| `door_close`        | Door closing                  |
-| `emergency_stop`    | Emergency halt                |
+### States Implemented:
 
-FSM implementation is defined in the elevator module
+| State               | Function               |
+| ------------------- | ---------------------- |
+| `electricity_check` | Power failure handling |
+| `idle`              | Waiting state          |
+| `move_up`           | Upward motion          |
+| `move_down`         | Downward motion        |
+| `door_open`         | Door open              |
+| `weight_check`      | Load verification      |
+| `alarm`             | Overweight condition   |
+| `door_close`        | Door closing           |
+| `emergency_stop`    | Emergency halt         |
 
 ---
 
 ## ⚡ Power Handling
 
-* If **electricity = 0** and **generator = 0**
-  → System enters `electricity_check`
+| Condition                      | Behavior                  |
+| ------------------------------ | ------------------------- |
+| Electricity = 0, Generator = 0 | System pauses             |
+| Power restored                 | Returns to previous state |
 
-### Behavior:
-
-* Elevator pauses safely
-* Resumes previous state when power returns
+✔ Ensures **safe recovery without state corruption**
 
 ---
 
-## ⚖️ Overweight Handling
-
-* Condition:
+## ⚖️ Overweight Protection
 
 ```
 weight ≥ 500
 ```
 
-### Behavior:
-
-* Elevator stops movement
-* Alarm is triggered
-* Returns to normal after weight reduces
+* Movement disabled
+* Alarm activated
+* Resumes only after safe weight
 
 ---
 
-## 🚨 Emergency Handling
-
-* Trigger:
+## 🚨 Emergency Stop
 
 ```
 e_stop = 1
 ```
 
-### Behavior:
-
-* Immediate stop
-* Door opens for safety
+* Immediate halt (Lift stops in nearest floor without reaching to target_floor when e_stop=1)
 * Transitions to safe state
+* Door opens automatically
 
 ---
 
 ## 🚪 Door Control Logic
 
-* Door opens when elevator reaches target floor
-* Timer-based control (~10 clock cycles)
-* Automatically closes after timeout
+* Opens at target floor
+* Timer-based (~10 clock cycles)
+* Auto-closes after timeout
 
 ---
 
-## 🎯 Target Floor Logic
+## 🎯 Target Floor Handling
 
-* Target floor is updated only when:
+* Updated **only after FIFO valid read**
+* Prevents:
 
-  * FIFO provides valid data
-  * Current request is completed
+  * Request skipping
+  * Duplicate servicing
 
-* Ensures:
+---
 
-  * No skipping of requests
-  * Ordered execution
+## 📊 Simulation Waveform
+
+The waveform verifies:
+
+* FSM transitions
+* FIFO read/write behavior
+* Floor movement
+* Door operations
+* Safety conditions
+
+![Waveform](images/waveform.png)
+
+---
+
+## 🖥️ Simulation Log Output
+
+The simulation log provides **cycle-accurate debugging visibility**:
+
+### Includes:
+
+* Current state
+* Current floor
+* Target floor
+* Request status
+* Control signals
+* Safety flags
+
+### Sample:
+
+```
+T=100 | floor=5 CUR_FLOOR=0 TARGET=5 req=1 state=move_up | UP=1 DOWN=0
+T=200 | floor=5 CUR_FLOOR=1 TARGET=5 req=0 state=move_up | UP=1 DOWN=0
+T=300 | floor=5 CUR_FLOOR=5 TARGET=5 req=0 state=door_open | DO=1 DC=0
+```
+
+📄 Full logs: `simulation_log.txt`
+
+---
+
+## 🧪 Testbench Coverage (22 Cases)
+
+### ✔ Functional Tests
+
+* Movement (up/down)
+* Same-floor request
+* Sequential requests
+
+### ✔ FIFO Tests
+
+* Multiple simultaneous requests
+* Continuous request injection
+
+### ✔ Safety Tests
+
+* Overweight condition
+* Emergency stop (idle + movement)
+
+### ✔ Edge Cases
+
+* Up & Down conflict
+* Rapid floor changes
+* Mixed inside/outside calls
+
+---
+
+## 🔧 Design Methodology
+
+✔ Synchronous design (posedge clk)
+✔ Clean separation:
+
+* State Register
+* Next-State Logic
+* Output Logic
+
+✔ Parameterized FIFO
+✔ Hierarchical modular design
+
+---
+
+## 🎯 Priority Handling
+
+```
+Emergency > Power Failure > Overweight > Normal Operation
+```
 
 ---
 
@@ -179,120 +240,44 @@ e_stop = 1
 ```text
 elevator-fifo-controller/
 │
-├── fifo_sync.v              # FIFO module
-├── elevator.v               # FSM-based elevator logic
-├── elevator_top.v           # Integration (FIFO + FSM)
-├── elevator_top_tb.v        # Testbench
-├── README.md
+├── fifo_sync.v
+├── elevator.v
+├── elevator_top.v
+├── elevator_top_tb.v
 ├── simulation_log.txt
+├── README.md
 └── images/
     └── waveform.png
 ```
 
 ---
 
-## 🧪 Testbench Description
+## 🚀 How to Run (Vivado)
 
-The testbench verifies **22 real-world scenarios** including:
-
-### ✔ Core Tests
-
-1. Idle with electricity
-2. No power condition
-3. Generator backup
-4. Door operation at same floor
-5. Upward movement
-6. Downward movement
-
-### ✔ Advanced Tests
-
-7. Multiple requests (FIFO behavior)
-8. Sequential requests
-9. Simultaneous requests
-10. Conflicting inputs (Up & Down)
-11. Rapid floor changes
-12. Inside & outside requests
-
-### ✔ Safety Tests
-
-13. Overweight condition
-14. Recovery after weight reduction
-15. Emergency stop during movement
-16. Emergency stop at idle
-
-### ✔ Stress Tests
-
-17. Multiple FIFO entries
-18. Continuous request injection
-19. Edge case combinations
-20. High load request handling
-21. Mixed inside/outside requests
-22. Random request patterns
-
----
-
-## 🖥️ Simulation Output
-
-### 🔹 Console Output Includes:
-
-* Current state
-* Current floor
-* Target floor
-* Movement direction
-* Door status
-* Alarm & emergency signals
-
----
-
-## 🔧 Design Highlights
-
-* 🧠 FSM-based control logic
-* 📥 FIFO-based scheduling
-* 🔄 Clean separation of modules
-* 🎯 Deterministic request handling
-
-### Priority Handling:
-
-```
-Emergency > Power Failure > Overweight > Normal Operation
-```
-
----
-
-## 🚀 How to Run
-
-### Using  Vivado:
-
-1. Compile files:
-
-```bash
- fifo_sync.v elevator.v elevator_top.v elevator_top_tb.v
-```
-
-2. Simulate:
-
-```bash
-sim elevator_top_tb
-run -all
-```
-
-3. Observe:
-
-* Waveforms
-* Console output logs
+1. Open project in **Xilinx Vivado**
+2. Add RTL and testbench files
+3. Run: **Run Behavioral Simulation**
+4. Observe:
+   → Waveforms
+   → Console output
 
 ---
 
 ## 🛠️ Tools Used
 
 * Verilog HDL
-* Xilinx Vivado 
+* Xilinx Vivado
 
 ---
 
-## 📜 License
+## 📈 Skills Demonstrated
 
-This project is licensed under the MIT License.
+* RTL Design
+* FSM Design
+* FIFO Design
+* Digital System Architecture
+* Verification & Debugging
+* Edge Case Handling
 
 ---
 
@@ -302,13 +287,13 @@ This project is licensed under the MIT License.
 
 ---
 
-## 📌 Acknowledgement
+## ## 📌 Acknowledgement
 
-This project demonstrates **advanced RTL design concepts** including:
+This project demonstrates *advanced RTL design concepts* including:
 
 * FSM Design
 * FIFO-Based Scheduling
 * Real-World System Modeling
 * Hardware Verification using Testbench
 
-It is a strong example of **industry-level digital design thinking**.
+It is a strong example of *industry-level digital design thinking*.
