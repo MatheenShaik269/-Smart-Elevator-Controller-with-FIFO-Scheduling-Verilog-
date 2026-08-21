@@ -19,6 +19,13 @@ module fifo_sync
 );
 
 localparam fifo_depth_log = $clog2(fifo_depth);
+    //It is caluclating no.of.bits require for fifo_depth
+    //  fifo_depth=8 
+    // fifo_depth=2**n where n=no.of.bits
+    // log2(fifo_depth)=nlog2(2)
+    //log2(fifo_depth)=n
+    //here log2() means logarithm with base 2 it represents result in binary.
+    //fifo_depth_log is also called as address_width or addr_width.
 
 // POINTERS
 reg [fifo_depth_log:0] write_pointer;
